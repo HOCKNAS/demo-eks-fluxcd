@@ -1,0 +1,57 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  interval: 1m
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      version: "46.8.0"
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: monitoring
+      interval: 1m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    grafana:
+      enabled: true
+      sidecar:
+        datasources:
+          enabled: true
+          defaultDatasourceEnabled: false
+          isDefaultDatasource: false
+      additionalDataSources: 
+        - name: prometheus-eks-demo
+          uid: prometheus-eks-demo
+          type: prometheus
+          url: http://prometheus-kube-prometheus-prometheus:9090
+          jsonData:
+            httpHeaderName1: 'X-Scope-OrgID'
+            tlsSkipVerify: true
+            httpMethod: POST
+          readOnly: false
+          secureJsonData:
+            httpHeaderValue1: 'eks-demo'
+    prometheus:
+      prometheusSpec:
+        externalLabels:
+            environment: demo
+            cluster: eks-demo
+        podMonitorSelectorNilUsesHelmValues: false
+        serviceMonitorSelectorNilUsesHelmValues: false
+        # storageSpec: 
+        #   volumeClaimTemplate:
+        #     spec:
+        #       storageClassName: ebs
+        #       accessModes: ["ReadWriteOnce"]
+        #       resources:
+        #         requests:
+        #           storage: 50Gi
